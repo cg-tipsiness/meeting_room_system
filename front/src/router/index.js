@@ -25,17 +25,17 @@ const routes = [
         component: MeetingList
       },
       {
-        path: 'meetinglist/detail/:id', // 会议详情应包含 ID
+        path: 'meeting/detail/:id', // 会议详情应包含 ID
         name: 'MeetingDetail',
         component: MeetingDetail
       },
       {
-        path: 'meetinglist/create',
+        path: 'meeting/create',
         name: 'CreateMeeting',
         component: CreateMeeting
       },
       {
-        path: 'meetinglist/edit/:id', // 编辑会议应包含 ID
+        path: 'meeting/edit/:id', // 编辑会议应包含 ID
         name: 'EditMeeting',
         component: EditMeeting
       },
