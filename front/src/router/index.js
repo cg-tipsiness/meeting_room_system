@@ -35,9 +35,14 @@ const routes = [
         component: CreateMeeting
       },
       {
-        path: 'meeting/edit/:id', // 编辑会议应包含 ID
+        path: 'meeting/edit/:id', // 修改路由以包含ID参数
         name: 'EditMeeting',
         component: EditMeeting
+      },
+      {
+        path: 'meeting/manage', // 添加管理页面路由
+        name: 'MeetingManage',
+        component: () => import('../views/meetings/MeetingManage.vue')
       },
       {
         path: 'user/profile',

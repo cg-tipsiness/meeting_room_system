@@ -126,19 +126,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
+import { GetMeetingRoomsService } from '@/api/meeting' // 引入服务方法
 
 const selectedArea = ref('')
 const selectedFloor = ref('')
 const meetingDate = ref('')
 const startTime = ref('')
 const endTime = ref('')
-const meetingTitle = ref('')
-const meetingDescription = ref('')
-const meetingParticipants = ref('')
-const isDialogVisible = ref(false)
-const selectedRoom = ref(null)
 
 const meetingForm = ref({
   title: '',
@@ -154,15 +150,7 @@ const participantOptions = [
   { value: '4', label: '赵六' }
 ]
 
-const meetingRooms = ref([
-  { id: 1, name: 'A区 101室', area: 'A', floor: '1', status: 'available' },
-  { id: 2, name: 'A区 102室', area: 'A', floor: '1', status: 'busy' },
-  { id: 3, name: 'A区 201室', area: 'A', floor: '2', status: 'available' },
-  { id: 4, name: 'B区 101室', area: 'B', floor: '1', status: 'busy' },
-  { id: 5, name: 'B区 102室', area: 'B', floor: '1', status: 'available' },
-  { id: 6, name: 'C区 301室', area: 'C', floor: '3', status: 'busy' },
-  { id: 7, name: 'D区 401室', area: 'D', floor: '4', status: 'available' }
-])
+const meetingRooms = ref([])
 
 const filteredRooms = computed(() => {
   return meetingRooms.value.filter((room) => {
@@ -227,61 +215,151 @@ const createMeeting = () => {
     endTime: endTime.value
   })
 }
+
+const getmeetingRooms = async () => {
+  try {
+    const data = await GetMeetingRoomsService() // 调用服务方法
+    console.log(data)
+    if (data.success) {
+      meetingRooms.value = data.rooms // 存储会议室数据
+    } else {
+      ElMessageBox.alert('获取会议室数据失败，请稍后重试。', '错误', {
+        confirmButtonText: '确定'
+      })
+    }
+  } catch (_) {
+    // 使用下划线表示不使用的参数
+    ElMessageBox.alert('获取会议室数据失败，请稍后重试。', '错误', {
+      confirmButtonText: '确定'
+    })
+  }
+}
+
+onMounted(() => {
+  getmeetingRooms()
+})
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/mobile.scss' as mobile;
+
 .create-meeting {
   display: flex;
+  min-height: calc(100vh - 60px);
+  padding: 20px;
   gap: 20px;
-  height: 100vh; // 设置为视口高度
-  overflow: hidden; // 防止滚动
+
+  @include mobile.responsive(mobile) {
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+  }
 
   .left-section {
-    flex: 2;
-    padding: 20px;
-    overflow-y: auto; // 允许内容滚动
+    flex: 1;
+    min-width: 300px;
+    max-width: 600px;
+
+    @include mobile.responsive(mobile) {
+      max-width: none;
+    }
 
     h1 {
-      margin-bottom: 20px;
-      color: #333;
+      margin: 0 0 20px;
+      font-size: 24px;
+
+      @include mobile.responsive(mobile) {
+        font-size: 20px;
+        margin-bottom: 15px;
+      }
     }
 
     .time-selection {
-      margin-bottom: 20px;
       display: flex;
       gap: 20px;
+      flex-wrap: wrap;
+
+      @include mobile.responsive(mobile) {
+        gap: 10px;
+
+        :deep(.el-date-picker),
+        :deep(.el-time-picker) {
+          width: 100% !important;
+          margin-bottom: 10px !important;
+        }
+      }
     }
 
     .filters {
-      margin-bottom: 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 20px;
+
+      @include mobile.responsive(mobile) {
+        flex-direction: column;
+        gap: 10px;
+
+        .el-select {
+          width: 100% !important;
+          margin-right: 0 !important;
+        }
+      }
     }
 
     .meeting-rooms {
       h2 {
-        margin-bottom: 10px;
-        color: #333;
+        margin: 0 0 20px;
+        font-size: 18px;
+
+        @include mobile.responsive(mobile) {
+          font-size: 16px;
+          margin-bottom: 15px;
+        }
       }
+
       .room-cards {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 20px;
-      }
-      .room-card {
-        width: 150px;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        transition: transform 0.2s;
-        cursor: pointer;
-        &.busy {
-          background-color: #ffcccc;
+
+        @include mobile.responsive(mobile) {
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 15px;
         }
-        &.available {
-          background-color: #ccffcc;
-        }
-        &:hover {
-          transform: scale(1.05);
+
+        .room-card {
+          padding: 15px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &.available {
+            background-color: #f0f9eb;
+            border: 1px solid #e1f3d8;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            }
+          }
+
+          &.busy {
+            background-color: #fef0f0;
+            border: 1px solid #fde2e2;
+            cursor: not-allowed;
+          }
+
+          h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            color: #303133;
+          }
+
+          p {
+            margin: 0;
+            font-size: 14px;
+            color: #606266;
+          }
         }
       }
     }
@@ -289,36 +367,79 @@ const createMeeting = () => {
 
   .right-section {
     flex: 1;
-    background-color: #f5f7fa;
-    height: 100%;
-    position: relative;
+    min-width: 300px;
+    max-width: 600px;
+
+    @include mobile.responsive(mobile) {
+      max-width: none;
+    }
 
     .meeting-form {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 
       .form-header {
         padding: 20px;
-        background-color: #fff;
         border-bottom: 1px solid #eee;
+
+        @include mobile.responsive(mobile) {
+          padding: 15px;
+        }
+
         h2 {
           margin: 0;
-          color: #333;
+          font-size: 18px;
+
+          @include mobile.responsive(mobile) {
+            font-size: 16px;
+          }
         }
       }
 
       .form-content {
-        flex: 1;
         padding: 20px;
-        overflow-y: auto;
+
+        @include mobile.responsive(mobile) {
+          padding: 15px;
+        }
+
+        :deep(.el-form-item) {
+          margin-bottom: 20px;
+
+          @include mobile.responsive(mobile) {
+            margin-bottom: 15px;
+
+            .el-form-item__label {
+              float: none;
+              display: block;
+              text-align: left;
+              padding: 0 0 8px;
+            }
+
+            .el-form-item__content {
+              margin-left: 0 !important;
+            }
+          }
+        }
+
+        :deep(.el-select) {
+          width: 100%;
+        }
       }
 
       .form-footer {
         padding: 20px;
-        background-color: #fff;
         border-top: 1px solid #eee;
         text-align: center;
+
+        @include mobile.responsive(mobile) {
+          padding: 15px;
+
+          .el-button {
+            width: 100%;
+          }
+        }
       }
     }
   }
@@ -332,7 +453,7 @@ const createMeeting = () => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
   border: none !important;
   width: 400px !important;
-  min-height: 200px !important; // 添加最小高度
+  min-height: 200px !important;
   position: fixed !important;
   top: 50% !important;
   left: 50% !important;
@@ -340,26 +461,39 @@ const createMeeting = () => {
   margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow: hidden !important; // 防止内容溢出
+  overflow: hidden !important;
+
+  @include mobile.responsive(mobile) {
+    width: 90% !important;
+    max-width: 300px !important;
+  }
 
   // 标题区域样式
   .el-message-box__header {
-    flex-shrink: 0 !important; // 防止标题区域被压缩
+    flex-shrink: 0 !important;
     padding: 20px 24px !important;
-    background-color: #409eff !important; // 使用主题蓝色
+    background-color: #409eff !important;
     border-top-left-radius: 12px !important;
     border-top-right-radius: 12px !important;
     text-align: center !important;
+
+    @include mobile.responsive(mobile) {
+      padding: 15px !important;
+    }
   }
 
   // 标题样式
   .el-message-box__title {
     font-size: 18px !important;
-    color: #ffffff !important; // 白色文字
+    color: #ffffff !important;
     font-weight: 600 !important;
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1.4 !important;
+
+    @include mobile.responsive(mobile) {
+      font-size: 16px !important;
+    }
   }
 
   // 内容样式
@@ -371,6 +505,10 @@ const createMeeting = () => {
     justify-content: center !important;
     background-color: #ffffff !important;
 
+    @include mobile.responsive(mobile) {
+      padding: 20px 15px !important;
+    }
+
     .el-message-box__message {
       margin: 0 !important;
       padding: 0 !important;
@@ -378,6 +516,10 @@ const createMeeting = () => {
       color: #5e6d82 !important;
       line-height: 1.6 !important;
       text-align: center !important;
+
+      @include mobile.responsive(mobile) {
+        font-size: 14px !important;
+      }
 
       p {
         margin: 0 !important;
@@ -387,7 +529,7 @@ const createMeeting = () => {
 
   // 按钮容器样式
   .el-message-box__btns {
-    flex-shrink: 0 !important; // 防止按钮区域被压缩
+    flex-shrink: 0 !important;
     padding: 16px 24px !important;
     background-color: #ffffff !important;
     border-top: 1px solid #ebeef5 !important;
@@ -396,6 +538,10 @@ const createMeeting = () => {
     display: flex !important;
     justify-content: center !important;
     gap: 12px !important;
+
+    @include mobile.responsive(mobile) {
+      padding: 12px 15px !important;
+    }
   }
 
   // 确认按钮样式
@@ -410,6 +556,12 @@ const createMeeting = () => {
     border-radius: 6px !important;
     transition: all 0.3s ease !important;
     margin: 0 !important;
+
+    @include mobile.responsive(mobile) {
+      max-width: 100px !important;
+      height: 32px !important;
+      font-size: 13px !important;
+    }
 
     &:hover {
       background-color: #66b1ff !important;
@@ -431,6 +583,12 @@ const createMeeting = () => {
     background-color: white !important;
     transition: all 0.3s ease !important;
     margin: 0 !important;
+
+    @include mobile.responsive(mobile) {
+      max-width: 100px !important;
+      height: 32px !important;
+      font-size: 13px !important;
+    }
 
     &:hover {
       color: #409eff !important;
